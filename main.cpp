@@ -5,12 +5,14 @@ const string DB_FILE = "db.txt";
 
 // Insert a (index, value) pair if not already present
 void insert_entry(const string &idx, int val) {
+    // Check existence by scanning file
     ifstream fin(DB_FILE);
     string curIdx; int curVal;
     while (fin >> curIdx >> curVal) {
         if (curIdx == idx && curVal == val) return; // already exists
     }
     fin.close();
+    // Append new entry
     ofstream fout(DB_FILE, ios::app);
     fout << idx << ' ' << val << '\n';
 }
@@ -18,7 +20,7 @@ void insert_entry(const string &idx, int val) {
 // Delete a specific (index, value) pair if it exists
 void delete_entry(const string &idx, int val) {
     ifstream fin(DB_FILE);
-    if (!fin) return;
+    if (!fin) return; // file may not exist
     string tmpPath = "db_tmp.txt";
     ofstream fout(tmpPath);
     string curIdx; int curVal;
