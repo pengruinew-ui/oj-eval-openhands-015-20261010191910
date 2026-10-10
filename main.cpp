@@ -3,61 +3,28 @@ using namespace std;
 
 const string DB_FILE = "db.txt";
 
-// Insert a (index, value) pair if not already present
-void insert_entry(const string &idx, int val) {
-    // Check existence by scanning file
+// Load database into memory map (set for sorted unique values)
+void load_db(unordered_map<string, set<int>>& mp) {
     ifstream fin(DB_FILE);
-    string curIdx; int curVal;
-    while (fin >> curIdx >> curVal) {
-        if (curIdx == idx && curVal == val) return; // already exists
+    if (!fin) return; // file may not exist yet
+    string idx; int val;
+    while (fin >> idx >> val) {
+        mp[idx].insert(val);
     }
     fin.close();
-    // Append new entry
-    ofstream fout(DB_FILE, ios::app);
-    fout << idx << ' ' << val << '\n';
 }
 
-// Delete a specific (index, value) pair if it exists
-void delete_entry(const string &idx, int val) {
-    ifstream fin(DB_FILE);
-    if (!fin) return; // file may not exist
-    string tmpPath = "db_tmp.txt";
-    ofstream fout(tmpPath);
-    string curIdx; int curVal;
-    while (fin >> curIdx >> curVal) {
-        if (!(curIdx == idx && curVal == val)) {
-            fout << curIdx << ' ' << curVal << '\n';
+// Save database from map to file
+void save_db(const unordered_map<string, set<int>>& mp) {
+    ofstream fout(DB_FILE, ios::trunc);
+    for (const auto& p : mp) {
+        const string& idx = p.first;
+        const set<int>& s = p.second;
+        for (int v : s) {
+            fout << idx << ' ' << v << '\n';
         }
     }
-    fin.close();
     fout.close();
-    rename(tmpPath.c_str(), DB_FILE.c_str());
-}
-
-// Find all values for a given index and output them sorted
-void find_entry(const string &idx) {
-    ifstream fin(DB_FILE);
-    if (!fin) {
-        cout << "null\n";
-        return;
-    }
-    vector<int> vals;
-    string curIdx; int curVal;
-    while (fin >> curIdx >> curVal) {
-        if (curIdx == idx) vals.push_back(curVal);
-    }
-    fin.close();
-    if (vals.empty()) {
-        cout << "null\n";
-        return;
-    }
-    sort(vals.begin(), vals.end());
-    vals.erase(unique(vals.begin(), vals.end()), vals.end());
-    for (size_t i = 0; i < vals.size(); ++i) {
-        if (i) cout << ' ';
-        cout << vals[i];
-    }
-    cout << '\n';
 }
 
 int main() {
@@ -65,19 +32,37 @@ int main() {
     cin.tie(nullptr);
     int n;
     if (!(cin >> n)) return 0;
+    unordered_map<string, set<int>> mp;
+    load_db(mp);
     string cmd, idx;
     int val;
     for (int i = 0; i < n; ++i) {
         cin >> cmd >> idx;
         if (cmd == "insert") {
             cin >> val;
-            insert_entry(idx, val);
+            mp[idx].insert(val);
         } else if (cmd == "delete") {
             cin >> val;
-            delete_entry(idx, val);
+            auto it = mp.find(idx);
+            if (it != mp.end()) {
+                it->second.erase(val);
+                if (it->second.empty()) mp.erase(it);
+            }
         } else if (cmd == "find") {
-            find_entry(idx);
+            auto it = mp.find(idx);
+            if (it == mp.end() || it->second.empty()) {
+                cout << "null\n";
+            } else {
+                bool first = true;
+                for (int v : it->second) {
+                    if (!first) cout << ' ';
+                    cout << v;
+                    first = false;
+                }
+                cout << "\n";
+            }
         }
     }
+    save_db(mp);
     return 0;
 }
